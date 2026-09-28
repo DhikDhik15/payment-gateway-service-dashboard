@@ -26,6 +26,7 @@ import { InvitationAcceptancePage } from '@/pages/InvitationAcceptancePage';
 import PaymentSimulatorPage from '@/pages/PaymentSimulatorPage';
 import CheckoutSimulatorPage from '@/pages/CheckoutSimulatorPage';
 import { PublicPaymentPage } from '@/pages/PublicPaymentPage';
+import ClientSimulatorPage from '@/pages/ClientSimulatorPage';
 import { simulatorEnabled } from '@/lib/simulator/config';
 
 function RootRedirect() {
@@ -60,6 +61,9 @@ export const router = createBrowserRouter([
   // Simulator routes are compiled out of production builds. The backend also
   // rejects simulator use outside an explicitly configured development tenant.
   ...simulatorRoutes,
+  // Client Simulator: standalone page using External Client API (X-API-Key auth).
+  // Intentionally outside AuthLayout/ProtectedRoute — it does not use dashboard JWT.
+  { path: '/client-simulator', element: <ClientSimulatorPage /> },
   {
     element: <AuthLayout />,
     children: [

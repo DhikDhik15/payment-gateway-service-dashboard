@@ -79,6 +79,7 @@ export interface CreatePaymentResponse {
   created_at: string;
 }
 
+
 export interface DashboardOverviewResponse {
   period: DashboardPeriod;
   payments: DashboardPaymentStats;
