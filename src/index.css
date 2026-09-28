@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode tokens */
+    --color-background: 0 0% 98%;
+    --color-foreground: 222 47% 11%;
+
+    --color-muted: 220 14% 96%;
+    --color-muted-foreground: 220 9% 46%;
+
+    --color-border: 220 13% 91%;
+    --color-input: 220 13% 91%;
+    --color-ring: 221 83% 53%;
+
+    --color-card: 0 0% 100%;
+    --color-card-foreground: 222 47% 11%;
+
+    --color-primary: 221 83% 53%;
+    --color-primary-foreground: 0 0% 100%;
+
+    --color-secondary: 220 14% 96%;
+    --color-secondary-foreground: 222 47% 11%;
+
+    --color-success: 142 71% 45%;
+    --color-success-foreground: 0 0% 100%;
+
+    --color-warning: 38 92% 50%;
+    --color-warning-foreground: 0 0% 100%;
+
+    --color-danger: 0 84% 60%;
+    --color-danger-foreground: 0 0% 100%;
+
+    --color-info: 199 89% 48%;
+    --color-info-foreground: 0 0% 100%;
+
+    --color-sidebar: 222 47% 11%;
+    --color-sidebar-foreground: 210 40% 90%;
+    --color-sidebar-border: 220 20% 18%;
+    --color-sidebar-accent: 217 33% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--color-border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+}
