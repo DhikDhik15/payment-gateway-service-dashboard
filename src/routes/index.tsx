@@ -19,6 +19,8 @@ import { SettlementsPage } from '@/pages/SettlementsPage';
 import { ReconciliationPage } from '@/pages/ReconciliationPage';
 import { ReconciliationDetailPage } from '@/pages/ReconciliationDetailPage';
 import { ApiKeysPage } from '@/pages/ApiKeysPage';
+import { ProductsPage } from '@/pages/ProductsPage';
+import { CategoriesPage } from '@/pages/CategoriesPage';
 import { WebhookConfigPage } from '@/pages/WebhookConfigPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { TeamPage } from '@/pages/TeamPage';
@@ -78,6 +80,8 @@ export const router = createBrowserRouter([
       { path: '/dashboard/payments', element: <PaymentsPage /> },
       { path: '/dashboard/payments/new', element: <CreatePaymentPage /> },
       { path: '/dashboard/payments/:id', element: <PaymentDetailPage /> },
+      { path: '/dashboard/products', element: <ProductsPage /> },
+      { path: '/dashboard/categories', element: <CategoriesPage /> },
       { path: '/dashboard/refunds', element: <RefundsPage /> },
       { path: '/dashboard/refunds/:id', element: <RefundDetailPage /> },
       { path: '/dashboard/webhooks', element: <WebhooksPage /> },

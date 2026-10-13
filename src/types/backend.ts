@@ -95,6 +95,22 @@ export interface DashboardTimelineEvent {
 
 export interface DashboardPaymentDetailResponse extends PaymentResponse {
   timeline: DashboardTimelineEvent[];
+  /**
+   * Immutable order-item snapshots for order-backed payments, in canonical
+   * item order. Omitted for payments without a linked order or resolvable
+   * items. Snapshot values — never live catalog prices. Integer minor units.
+   */
+  order_items?: DashboardPaymentOrderItem[];
+}
+
+/** One purchased line as recorded at order creation time. */
+export interface DashboardPaymentOrderItem {
+  product_name: string;
+  /** Unit price at purchase time, integer minor units. */
+  unit_price: number;
+  quantity: number;
+  /** Stored unit_price × quantity, integer minor units. */
+  subtotal: number;
 }
 
 export interface CreateRefundRequest {
@@ -277,4 +293,62 @@ export interface InvitationMetadataResponse {
   merchant_name: string;
   status: 'PENDING';
   expires_at: string;
+}
+
+export interface Category {
+  id: string;
+  merchant_id: string;
+  name: string;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateCategoryRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface Product {
+  id: string;
+  merchant_id: string;
+  category_id?: string | null;
+  name: string;
+  sku?: string | null;
+  description?: string | null;
+  /** Integer minor units (IDR: rupiah). Never floating point. */
+  price: number;
+  currency: string;
+  /** Optional HTTPS reference for storefront display. Absent until backend migration 000023. */
+  image_url?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateProductRequest {
+  name: string;
+  price: number;
+  currency: string;
+  sku?: string;
+  description?: string;
+  category_id?: string;
+  image_url?: string;
+  active?: boolean;
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  price?: number;
+  currency?: string;
+  sku?: string;
+  description?: string;
+  category_id?: string;
+  image_url?: string;
+  active?: boolean;
 }

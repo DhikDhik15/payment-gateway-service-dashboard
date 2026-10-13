@@ -12,6 +12,8 @@ function getPageTitle(pathname: string): string {
   const map: Record<string, string> = {
     '/dashboard': 'Overview',
     '/dashboard/payments': 'Payments',
+    '/dashboard/products': 'Products',
+    '/dashboard/categories': 'Categories',
     '/dashboard/refunds': 'Refunds',
     '/dashboard/webhooks': 'Webhooks',
     '/dashboard/settlements': 'Settlements',

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, SyntheticEvent } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
@@ -40,8 +40,14 @@ export function Dialog({
     else if (!open && el.open) el.close();
   }, [open]);
 
-  // Close on backdrop click
+  // Close on backdrop click. Only a click whose target is the <dialog>
+  // element itself (the backdrop region) dismisses. Clicks bubbling up from
+  // dialog content must never close the modal — notably the synthetic
+  // (clientX/Y 0,0) click dispatched by `fileInput.click()` in a "Choose
+  // Image" button, which falls outside the dialog rect and would otherwise be
+  // mistaken for a backdrop dismissal, instantly closing the modal.
   const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+    if (e.target !== e.currentTarget) return;
     const rect = dialogRef.current?.getBoundingClientRect();
     if (!rect) return;
     const { clientX: x, clientY: y } = e;
@@ -50,10 +56,27 @@ export function Dialog({
     }
   };
 
+  // Route the native `cancel` (Escape) through React state instead of letting
+  // the browser tear down the <dialog> natively. A native teardown fires
+  // `close` outside React control — e.g. an Escape pressed to dismiss the OS
+  // file picker opened from a "Choose Image" button inside the dialog would
+  // otherwise close the whole modal — and it can desync the element
+  // (`el.open === false`) from the `open` prop when a guarded close (such as
+  // a pending save) intentionally keeps `open === true`. `cancel` events
+  // bubbling up from descendants (notably the file picker's own cancel when
+  // the user dismisses it without choosing a file) are ignored: only a cancel
+  // dispatched at the dialog itself is a dismissal.
+  const handleCancel = (e: SyntheticEvent<HTMLDialogElement>) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    onClose();
+  };
+
   return (
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      onCancel={handleCancel}
       onClick={handleBackdropClick}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
@@ -75,6 +98,7 @@ export function Dialog({
           )}
         </div>
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={onClose}

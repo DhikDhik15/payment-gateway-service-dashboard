@@ -20,6 +20,7 @@ import {
   Badge,
 } from '@/components/ui';
 import { usePaymentDetail, useCreateRefund } from '@/hooks/usePayments';
+import { ProductDetailsCard } from '@/components/payments/ProductDetailsCard';
 import { useSettings } from '@/hooks/useSettings';
 import { errorMessage, fieldError, isErrorCode, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -125,6 +126,14 @@ export function PaymentDetailPage() {
           </Card>
 
           {isQris && <QrisPaymentPanel payment={data} />}
+
+          {data.order_items && data.order_items.length > 0 && (
+            <ProductDetailsCard
+              items={data.order_items}
+              currency={data.currency}
+              paymentTotal={data.amount}
+            />
+          )}
 
           <Card>
             <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>

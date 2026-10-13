@@ -4,6 +4,8 @@ import {
   LayoutDashboard,
   CreditCard,
   RotateCcw,
+  Package,
+  Tags,
   Webhook,
   BarChart3,
   KeyRound,
@@ -39,6 +41,13 @@ const NAV: (NavItem | NavGroup)[] = [
     items: [
       { label: 'Payments', to: '/dashboard/payments', icon: CreditCard },
       { label: 'Refunds', to: '/dashboard/refunds', icon: RotateCcw },
+    ],
+  },
+  {
+    heading: 'CATALOG',
+    items: [
+      { label: 'Products', to: '/dashboard/products', icon: Package },
+      { label: 'Categories', to: '/dashboard/categories', icon: Tags },
     ],
   },
   {

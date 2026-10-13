@@ -157,6 +157,10 @@ function isAbortError(error: unknown): boolean {
   return typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError';
 }
 
+function isFormDataBody(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
 function requestSignal(
   callerSignal: AbortSignal | undefined,
   timeoutMs: number,
@@ -209,9 +213,12 @@ async function request<T>(
   options: RequestOptions = {},
 ): Promise<ApiResponse<T>> {
   const url = `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  // Multipart uploads (FormData) must not carry a JSON Content-Type: the
+  // browser generates the multipart boundary when the header is absent.
+  const isFormData = isFormDataBody(body);
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...(!isFormData && body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     ...options.headers,
   };
 
@@ -225,7 +232,7 @@ async function request<T>(
     response = await fetch(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? (isFormData ? body : JSON.stringify(body)) : undefined,
       signal: timeout.signal,
       credentials: options.credentials ?? (options.skipAuth ? 'omit' : 'include'),
     });
