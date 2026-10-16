@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useTeam';
 import { errorMessage, fieldError, isLastOwnerError, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canManageTeam } from '@/lib/auth/permissions';
 import { formatDateTime } from '@/lib/utils';
 import type { DashboardUserResponse, DashboardUserRole, DashboardUserStatus } from '@/types';
 
@@ -91,7 +92,7 @@ export function TeamManagementPanel() {
   });
 
   const merchantActive = merchant?.status === 'ACTIVE';
-  const canManage = user?.role === 'OWNER';
+  const canManage = canManageTeam(user?.role);
 
   useEffect(() => {
     if (users) {
@@ -122,6 +123,7 @@ export function TeamManagementPanel() {
   }, [invitation]);
 
   const openInvite = () => {
+    if (!canManage || !merchantActive) return;
     setActionError(null);
     inviteMutation.reset();
     inviteForm.reset({ email: '', role: 'VIEWER' });
@@ -138,6 +140,7 @@ export function TeamManagementPanel() {
   };
 
   const submitInvite = (values: InviteValues) => {
+    if (!canManage || !merchantActive || inviteMutation.isPending) return;
     setActionError(null);
     inviteMutation.mutate(
       { email: values.email.trim().toLowerCase(), role: values.role },
@@ -171,6 +174,7 @@ export function TeamManagementPanel() {
   };
 
   const updateRole = (member: DashboardUserResponse) => {
+    if (!canManage || !merchantActive || roleMutation.isPending) return;
     const role = roleDrafts[member.id] ?? member.role;
     if (role === member.role) return;
     setActionError(null);
@@ -178,6 +182,7 @@ export function TeamManagementPanel() {
   };
 
   const updateStatus = (member: DashboardUserResponse) => {
+    if (!canManage || !merchantActive || statusMutation.isPending) return;
     const status: DashboardUserStatus = member.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
     setActionError(null);
     statusMutation.mutate({ userId: member.id, status });

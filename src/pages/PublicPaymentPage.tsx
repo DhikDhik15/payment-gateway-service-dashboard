@@ -28,6 +28,7 @@ import {
 import { errorMessage, isErrorCode, isStatus } from '@/lib/api';
 import { effectiveMockPaymentStatus } from '@/lib/mock-payment';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { useDocumentTitle } from '@/lib/documentTitle';
 import type { MockPaymentStatus } from '@/types';
 
 function PublicPaymentShell({ children }: { children: ReactNode }) {
@@ -102,6 +103,7 @@ function simulationErrorMessage(error: unknown): string {
 }
 
 export function PublicPaymentPage() {
+  useDocumentTitle('Complete payment');
   const { identifier } = useParams<{ identifier: string }>();
   const paymentQuery = usePublicMockPayment(identifier);
   const successMutation = useSimulateMockPaymentSuccess(identifier ?? '');

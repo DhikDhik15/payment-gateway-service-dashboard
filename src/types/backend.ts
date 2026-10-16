@@ -13,6 +13,13 @@ export interface DashboardPaymentStats {
   failed: number;
   expired: number;
   cancelled: number;
+  /**
+   * Server-computed count of terminal unsuccessful payments
+   * (FAILED + EXPIRED + CANCELLED). Optional until the backend
+   * dashboard overview endpoint exposes it; clients fall back to
+   * summing the per-status aggregates above.
+   */
+  unsuccessful_transactions?: number;
 }
 
 export interface DashboardRevenueStats {
@@ -86,6 +93,43 @@ export interface DashboardOverviewResponse {
   revenue: DashboardRevenueStats;
   refunds: DashboardRefundStats;
   recent_payments: PaymentResponse[];
+}
+
+export interface DashboardAnalyticsSummary {
+  total_revenue: number;
+  successful_payments: number;
+  units_sold: number;
+  /** Null when no order was paid in the selected period. */
+  average_order_value: number | null;
+}
+
+export interface DashboardRevenueBucket {
+  /** Bucket start as UTC calendar day (YYYY-MM-DD). */
+  date: string;
+  revenue: number;
+}
+
+export interface DashboardProductSales {
+  /** Null for items whose catalog product was deleted. */
+  product_id: string | null;
+  /** Latest snapshot name; historical quantities/prices preserved. */
+  product_name: string;
+  units_sold: number;
+  revenue: number;
+}
+
+export interface DashboardAnalyticsResponse {
+  period: DashboardPeriod;
+  /** "day" for windows up to 62 days, otherwise Monday-start "week". */
+  interval: string;
+  /** ISO currency of revenue figures (latest paid row, IDR when empty). */
+  currency: string;
+  summary: DashboardAnalyticsSummary;
+  revenue_trend: DashboardRevenueBucket[];
+  /** At most 5 rows, ranked by units sold. */
+  top_products: DashboardProductSales[];
+  /** Bounded rows, ranked by revenue descending. */
+  revenue_by_product: DashboardProductSales[];
 }
 
 export interface DashboardTimelineEvent {

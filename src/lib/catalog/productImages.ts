@@ -1,4 +1,5 @@
 import { apiClient } from '../api/client';
+import { isManagerRole } from '../auth/permissions';
 import type { DashboardRole } from '@/types/auth';
 
 /**
@@ -100,7 +101,7 @@ export function resolveProductImageUrl(
 export function canManageProductImages(
   role: DashboardRole | string | null | undefined,
 ): boolean {
-  return role === 'OWNER' || role === 'ADMIN';
+  return isManagerRole(role as DashboardRole | null | undefined);
 }
 
 /**
@@ -121,7 +122,7 @@ export async function uploadProductImage(file: Blob): Promise<string> {
   const response = await apiClient.post<ProductImageUploadResponse>(
     PRODUCT_IMAGE_UPLOAD_PATH,
     form,
-    { retryOnUnauthorized: false },
+    { retryOnUnauthorized: true },
   );
   const imageUrl = (response.data as Partial<ProductImageUploadResponse> | null | undefined)?.image_url;
   if (typeof imageUrl !== 'string' || !imageUrl.trim()) {
@@ -139,6 +140,6 @@ export async function uploadProductImage(file: Blob): Promise<string> {
  */
 export async function deleteProductImage(productId: string): Promise<void> {
   await apiClient.delete<unknown>(buildProductImageDeletePath(productId), {
-    retryOnUnauthorized: false,
+    retryOnUnauthorized: true,
   });
 }

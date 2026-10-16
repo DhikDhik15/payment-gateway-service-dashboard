@@ -102,7 +102,7 @@ These remain backend contract limitations rather than client-side substitutes.
 
 ### Phase 11.2B public mock payment contract
 
-The public `/pay/:identifier` route reads `GET /api/v1/mock-payments/:identifier` and uses only the PaymentURL returned by the canonical payment detail response. Configure the backend's `MOCK_PAYMENT_BASE_URL` (or an equivalent reverse proxy) so that returned URL serves this public SPA route; the frontend never rewrites it. Without that explicit topology, the backend's default PaymentURL may target the backend JSON endpoint or an unpublished port instead of the SPA. The public development simulator actions are `POST /api/v1/mock-payments/:identifier/success` and `/fail`; they are provider actions and do not directly update the merchant dashboard payment.
+The public `/pay/:identifier` route reads `GET /api/v1/mock-payments/:identifier` and uses only the PaymentURL returned by the canonical payment detail response. Configure the backend's `FRONTEND_PUBLIC_URL` (or an equivalent reverse proxy) so that the returned `payment_url` — `{FRONTEND_PUBLIC_URL}/pay/{providerTxId}` — serves this public SPA route; the frontend never rewrites it. `MOCK_PAYMENT_BASE_URL` is deprecated and must not be used. Without that explicit topology, the backend's default PaymentURL may target the backend JSON endpoint or an unpublished port instead of the SPA. The public development simulator actions are `POST /api/v1/mock-payments/:identifier/success` and `/fail`; they are provider actions and do not directly update the merchant dashboard payment.
 
 ## Security review checklist
 

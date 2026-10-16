@@ -77,8 +77,15 @@ export interface RequestOptions {
   signal?: AbortSignal;
   credentials?: RequestCredentials;
   /**
-   * Retrying a mutation after a 401 is unsafe by default. A caller may opt in
-   * only when its operation has a backend idempotency guarantee.
+   * Opt in to the single refresh-and-retry pass after a 401 for non-GET
+   * requests. Safe for dashboard mutations under the verified backend
+   * contract: RequireDashboardAuth middleware aborts with 401 before any
+   * handler runs (so a 401 means the mutation did not execute), role
+   * failures use 403 (never retried here), and payment/refund creation
+   * additionally carry a merchant-scoped Idempotency-Key that the backend
+   * replays safely. The retry re-sends the identical body and headers at
+   * most once (see `retry`). Flows without dashboard identity (public,
+   * simulator, invitation, external-client) must leave this disabled.
    */
   retryOnUnauthorized?: boolean;
   /** Request timeout in milliseconds. Set to 0 to disable. */

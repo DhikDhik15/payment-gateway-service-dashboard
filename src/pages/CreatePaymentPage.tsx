@@ -19,6 +19,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { errorMessage, fieldError, isErrorCode, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canCreatePayments } from '@/lib/auth/permissions';
 
 const schema = z.object({
   merchant_order_id: z.string().trim().min(1, 'Merchant order ID is required').max(100, 'Maximum 100 characters'),
@@ -46,7 +47,7 @@ export function CreatePaymentPage() {
   });
 
   const merchantActive = merchant?.status === 'ACTIVE';
-  const canCreate = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canCreate = canCreatePayments(user?.role);
 
   const submit = (values: Values) => {
     if (!canCreate || !merchantActive) return;

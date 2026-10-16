@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient, ApiClientError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth';
 import type { DashboardOverviewResponse } from '@/types';
+import { buildOverviewPath } from './overviewQuery';
 
 export function useOverview(from?: string, to?: string) {
   const { user, isAuthenticated } = useAuth();
@@ -12,11 +13,7 @@ export function useOverview(from?: string, to?: string) {
     retry: (failureCount, error) =>
       (!(error instanceof ApiClientError) || error.status >= 500) && failureCount < 2,
     queryFn: async ({ signal }) => {
-      let path = '/api/v1/dashboard/overview';
-      if (from && to) {
-        const query = new URLSearchParams({ from, to });
-        path += `?${query.toString()}`;
-      }
+      const path = buildOverviewPath(from, to);
       const response = await apiClient.get<DashboardOverviewResponse>(path, { signal });
       return response.data;
     },

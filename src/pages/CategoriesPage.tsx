@@ -21,6 +21,7 @@ import {
 } from '@/hooks/useCategories';
 import { errorMessage, isErrorCode } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canManageCatalog } from '@/lib/auth/permissions';
 import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/utils';
 import type { Category } from '@/types';
@@ -42,7 +43,7 @@ export function CategoriesPage() {
   const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
   const { user } = useAuth();
   const { data: merchant } = useSettings();
-  const canMutate = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canMutate = canManageCatalog(user?.role);
   const merchantActive = merchant?.status === 'ACTIVE';
 
   const { data, isLoading, isError, error, refetch } = useCategories();
@@ -60,22 +61,25 @@ export function CategoriesPage() {
   };
 
   const submitEditor = (values: CategoryFormValues) => {
+    if (!canMutate) return;
     const body = {
       name: values.name.trim(),
       ...(values.description.trim() ? { description: values.description.trim() } : {}),
     };
     if (editor?.mode === 'edit') {
+      if (updateMutation.isPending) return;
       updateMutation.mutate(
         { categoryId: editor.category.id, body },
         { onSuccess: () => setEditor(null) },
       );
-    } else {
+    } else if (editor) {
+      if (!merchantActive || createMutation.isPending) return;
       createMutation.mutate({ body }, { onSuccess: () => setEditor(null) });
     }
   };
 
   const confirmDelete = () => {
-    if (!pendingDelete || deleteMutation.isPending) return;
+    if (!canMutate || !pendingDelete || deleteMutation.isPending) return;
     deleteMutation.mutate(
       { categoryId: pendingDelete.id },
       { onSuccess: () => setPendingDelete(null) },

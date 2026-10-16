@@ -22,6 +22,7 @@ import { LegacyCredentialCard } from '@/components/keys/LegacyCredentialCard';
 import { useSettings } from '@/hooks/useSettings';
 import { errorMessage, fieldError, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canManageApiKeys } from '@/lib/auth/permissions';
 import { formatDateTime, dateOnlyToRFC3339EndOfDay } from '@/lib/utils';
 import type { MerchantAPIKeyResponse } from '@/types';
 
@@ -44,7 +45,7 @@ export function ApiKeysPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<KeyFormValues>({ resolver: zodResolver(keySchema), defaultValues: { name: '', expires_at: '' } });
 
-  const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canManage = canManageApiKeys(user?.role);
   const merchantActive = merchant?.status === 'ACTIVE';
 
   const closeDialog = () => {
@@ -58,6 +59,7 @@ export function ApiKeysPage() {
   };
 
   const openDialog = () => {
+    if (!canManage || !merchantActive) return;
     setFormError(null);
     createMutation.reset();
     form.reset({ name: '', expires_at: '' });
@@ -66,6 +68,7 @@ export function ApiKeysPage() {
   };
 
   const submit = (values: KeyFormValues) => {
+    if (!canManage || !merchantActive || createMutation.isPending) return;
     setFormError(null);
     let expiresAt: string | undefined;
     try {
@@ -92,6 +95,7 @@ export function ApiKeysPage() {
   };
 
   const revoke = (key: MerchantAPIKeyResponse) => {
+    if (!canManage || !merchantActive || revokeMutation.isPending) return;
     if (!window.confirm(`Revoke “${key.name}”? Applications using this key will stop authenticating immediately.`)) return;
     revokeMutation.mutate(key.id, { onError: (mutationError) => setFormError(errorMessage(mutationError)) });
   };
@@ -131,7 +135,7 @@ export function ApiKeysPage() {
           <div className="space-y-2"><Label htmlFor="key-name" required>Key name</Label><Input id="key-name" placeholder="e.g. Production mobile app" {...form.register('name')} error={form.formState.errors.name?.message ?? fieldError(createMutation.error, 'name')} /></div>
           <div className="space-y-2"><Label htmlFor="key-expiry">Expiration (optional)</Label><Input id="key-expiry" type="date" {...form.register('expires_at')} /><p className="text-xs text-muted-foreground">Leave empty for a key that does not expire.</p></div>
           {(formError || createMutation.isError) && <div className="rounded-md border border-danger/30 bg-danger/5 p-3 text-sm text-danger" role="alert">{formError ?? (isMerchantInactiveError(createMutation.error) ? 'The merchant is not active, so no key was created.' : errorMessage(createMutation.error))}</div>}
-          <div className="flex justify-end gap-3 pt-2"><Button type="button" variant="ghost" onClick={closeDialog}>Cancel</Button><Button type="submit" isLoading={createMutation.isPending} disabled={!merchantActive}>Create key</Button></div>
+          <div className="flex justify-end gap-3 pt-2"><Button type="button" variant="ghost" onClick={closeDialog}>Cancel</Button><Button type="submit" isLoading={createMutation.isPending} disabled={!canManage || !merchantActive}>Create key</Button></div>
         </form>}
       </Dialog>
     </div>

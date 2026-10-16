@@ -15,6 +15,7 @@ import { useWebhookDeliveries, useRetryWebhookDelivery } from '@/hooks/useWebhoo
 import { useSettings } from '@/hooks/useSettings';
 import { errorMessage, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canManageWebhooks } from '@/lib/auth/permissions';
 import { formatDateTime } from '@/lib/utils';
 import { listTotalPages, type MerchantWebhookDeliveryResponse } from '@/types';
 import { Link } from 'react-router-dom';
@@ -25,8 +26,13 @@ export function WebhooksPage() {
   const { data: merchant } = useSettings();
   const { data, isLoading, isError, error, refetch } = useWebhookDeliveries({ page, limit: 10 });
   const retryMutation = useRetryWebhookDelivery();
-  const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canManage = canManageWebhooks(user?.role);
   const canRetry = canManage && merchant?.status === 'ACTIVE';
+
+  const retry = (deliveryId: string) => {
+    if (!canRetry || retryMutation.isPending) return;
+    retryMutation.mutate(deliveryId);
+  };
 
   const columns = [
     { key: 'event_id', header: 'Event ID', render: (delivery: MerchantWebhookDeliveryResponse) => <span className="font-mono text-xs text-muted-foreground">{delivery.event_id}</span> },
@@ -34,7 +40,7 @@ export function WebhooksPage() {
     { key: 'status', header: 'Status', render: (delivery: MerchantWebhookDeliveryResponse) => <WebhookStatusBadge status={delivery.status} /> },
     { key: 'attempts', header: 'Attempts', render: (delivery: MerchantWebhookDeliveryResponse) => delivery.attempt_count },
     { key: 'created_at', header: 'Date', render: (delivery: MerchantWebhookDeliveryResponse) => <span className="whitespace-nowrap text-muted-foreground">{formatDateTime(delivery.created_at)}</span> },
-    { key: 'actions', header: '', headerClassName: 'w-24', render: (delivery: MerchantWebhookDeliveryResponse) => <div className="flex items-center gap-2">{['FAILED', 'DEAD', 'PENDING'].includes(delivery.status) && <Button variant="ghost" size="icon" aria-label={`Retry delivery ${delivery.id}`} title={canRetry ? 'Retry now' : 'OWNER or ADMIN role and active merchant required'} disabled={!canRetry || retryMutation.isPending} onClick={() => retryMutation.mutate(delivery.id)}><RefreshCw className={`h-4 w-4 ${retryMutation.isPending && retryMutation.variables === delivery.id ? 'animate-spin' : ''}`} aria-hidden="true" /></Button>}<Button variant="ghost" size="icon" asChild title="View detail" aria-label={`View delivery ${delivery.id}`}><Link to={`/dashboard/webhooks/${encodeURIComponent(delivery.id)}`}><Eye className="h-4 w-4" aria-hidden="true" /></Link></Button></div> },
+    { key: 'actions', header: '', headerClassName: 'w-24', render: (delivery: MerchantWebhookDeliveryResponse) => <div className="flex items-center gap-2">{['FAILED', 'DEAD', 'PENDING'].includes(delivery.status) && <Button variant="ghost" size="icon" aria-label={`Retry delivery ${delivery.id}`} title={canRetry ? 'Retry now' : 'OWNER or ADMIN role and active merchant required'} disabled={!canRetry || retryMutation.isPending} onClick={() => retry(delivery.id)}><RefreshCw className={`h-4 w-4 ${retryMutation.isPending && retryMutation.variables === delivery.id ? 'animate-spin' : ''}`} aria-hidden="true" /></Button>}<Button variant="ghost" size="icon" asChild title="View detail" aria-label={`View delivery ${delivery.id}`}><Link to={`/dashboard/webhooks/${encodeURIComponent(delivery.id)}`}><Eye className="h-4 w-4" aria-hidden="true" /></Link></Button></div> },
   ];
 
   const totalPages = listTotalPages(data?.meta);

@@ -8,6 +8,7 @@ import { PageHeader, Card, CardHeader, CardTitle, CardContent, Label, Input, But
 import { useSimulatorCreatePayment } from '@/hooks/useSimulator';
 import { setSimulatorApiKey } from '@/lib/simulator/credential';
 import { formatCurrency } from '@/lib/utils';
+import { useDocumentTitle } from '@/lib/documentTitle';
 import type { CreatePaymentResponse } from '@/types';
 
 const simulatorSchema = z.object({ merchant_order_id: z.string().trim().min(1, 'Order ID is required').max(100), amount: z.coerce.number().int('Whole rupiah amounts only').positive('Amount must be positive'), currency: z.literal('IDR'), payment_method: z.literal('QRIS') });
@@ -15,6 +16,7 @@ type SimulatorFormValues = z.infer<typeof simulatorSchema>;
 function newKey(): string { return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `sim-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
 
 export default function PaymentSimulatorPage() {
+  useDocumentTitle('Payment simulator');
   const navigate = useNavigate();
   const createMutation = useSimulatorCreatePayment();
   const [createdPayment, setCreatedPayment] = useState<CreatePaymentResponse | null>(null);

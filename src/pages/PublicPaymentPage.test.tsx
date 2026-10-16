@@ -58,3 +58,43 @@ test('a pending payment past its backend expiry is presented as expired', () => 
   assert.match(markup, /This payment has expired/);
   assert.doesNotMatch(markup, /Simulate successful payment/);
 });
+
+function renderPageWithClient(
+  value: MockPaymentResponse | undefined,
+  client: QueryClient,
+): string {
+  if (value !== undefined) {
+    client.setQueryData(mockPaymentQueryKey(identifier), value);
+  }
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[`/pay/${identifier}`]}>
+        <Routes>
+          <Route path="/pay/:identifier" element={<PublicPaymentPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+test('public payment page shows a loading state while data is being fetched', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const markup = renderPageWithClient(undefined, client);
+  assert.match(markup, /Loading…/);
+  assert.doesNotMatch(markup, /ORDER-11/);
+});
+
+test('public payment page reports a missing QRIS payload without fabricating one', () => {
+  const markup = renderPage({ ...payment, qris_payload: null });
+  assert.match(markup, /QRIS payment information/);
+  assert.match(markup, /did not return a QRIS payload/);
+  assert.doesNotMatch(markup, /PAYGATE-MOCK-QRIS/);
+});
+
+test('public payment page hides simulation actions for a non-pending terminal state', () => {
+  for (const status of ['PAID', 'FAILED', 'EXPIRED'] as const) {
+    const markup = renderPage({ ...payment, status });
+    assert.doesNotMatch(markup, /Simulate successful payment/);
+    assert.doesNotMatch(markup, /Simulate failed payment/);
+  }
+});

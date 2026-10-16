@@ -79,7 +79,7 @@ export function useCreateCategory() {
       const response = await apiClient.post<Category>(
         '/api/v1/dashboard/categories',
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -100,7 +100,7 @@ export function useUpdateCategory() {
       const response = await apiClient.patch<Category>(
         buildCategoryDetailPath(categoryId),
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -113,7 +113,7 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: async ({ categoryId }: { categoryId: string }) => {
       await apiClient.delete(buildCategoryDetailPath(categoryId), {
-        retryOnUnauthorized: false,
+        retryOnUnauthorized: true,
       });
       return categoryId;
     },

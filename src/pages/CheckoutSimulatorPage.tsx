@@ -15,11 +15,13 @@ import {
   useSimulatorFailure,
 } from '@/hooks/useSimulator';
 import { formatCurrency } from '@/lib/utils';
+import { useDocumentTitle } from '@/lib/documentTitle';
 import { getSimulatorApiKey, setSimulatorApiKey } from '@/lib/simulator/credential';
 import { isQrisPaymentMethod } from '@/lib/simulator/qr';
 import { SimulatorQrCode } from '@/components/simulator/SimulatorQrCode';
 
 export default function CheckoutSimulatorPage() {
+  useDocumentTitle('Checkout simulator');
   const { paymentId } = useParams<{ paymentId: string }>();
   const navigate = useNavigate();
 

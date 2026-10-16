@@ -5,31 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { MerchantStatusBanner } from '@/components/layout/MerchantStatusBanner';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/lib/auth';
-
-// ─── Route → page title map ───────────────────────────────────────────────────
-
-function getPageTitle(pathname: string): string {
-  const map: Record<string, string> = {
-    '/dashboard': 'Overview',
-    '/dashboard/payments': 'Payments',
-    '/dashboard/products': 'Products',
-    '/dashboard/categories': 'Categories',
-    '/dashboard/refunds': 'Refunds',
-    '/dashboard/webhooks': 'Webhooks',
-    '/dashboard/settlements': 'Settlements',
-    '/dashboard/reconciliation': 'Reconciliation',
-    '/dashboard/api-keys': 'API Keys',
-    '/dashboard/webhook-config': 'Webhook Config',
-    '/dashboard/settings': 'Settings',
-    '/dashboard/team': 'Team',
-  };
-  if (map[pathname]) return map[pathname];
-  if (pathname.startsWith('/dashboard/payments/')) return 'Payment Detail';
-  if (pathname.startsWith('/dashboard/refunds/')) return 'Refund Detail';
-  if (pathname.startsWith('/dashboard/webhooks/')) return 'Webhook Delivery';
-  if (pathname.startsWith('/dashboard/reconciliation/')) return 'Reconciliation Detail';
-  return 'Dashboard';
-}
+import { getRouteTitle, useDocumentTitle } from '@/lib/documentTitle';
 
 // ─── DashboardLayout ─────────────────────────────────────────────────────────
 
@@ -65,7 +41,8 @@ export function DashboardLayout() {
     };
   }, [drawerOpen]);
 
-  const pageTitle = getPageTitle(location.pathname);
+  const pageTitle = getRouteTitle(location.pathname);
+  useDocumentTitle(pageTitle);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

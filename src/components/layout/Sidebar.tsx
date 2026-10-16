@@ -1,77 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import type { LucideIcon } from 'lucide-react';
-import {
-  LayoutDashboard,
-  CreditCard,
-  RotateCcw,
-  Package,
-  Tags,
-  Webhook,
-  BarChart3,
-  KeyRound,
-  Settings,
-  Radio,
-  Users,
-  X,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui';
-
-// ─── Nav structure ────────────────────────────────────────────────────────────
-
-interface NavItem {
-  label: string;
-  to: string;
-  icon: LucideIcon;
-}
-
-interface NavGroup {
-  heading: string;
-  items: NavItem[];
-}
-
-const NAV: (NavItem | NavGroup)[] = [
-  {
-    label: 'Overview',
-    to: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    heading: 'TRANSACTIONS',
-    items: [
-      { label: 'Payments', to: '/dashboard/payments', icon: CreditCard },
-      { label: 'Refunds', to: '/dashboard/refunds', icon: RotateCcw },
-    ],
-  },
-  {
-    heading: 'CATALOG',
-    items: [
-      { label: 'Products', to: '/dashboard/products', icon: Package },
-      { label: 'Categories', to: '/dashboard/categories', icon: Tags },
-    ],
-  },
-  {
-    heading: 'OPERATIONS',
-    items: [
-      { label: 'Webhooks', to: '/dashboard/webhooks', icon: Webhook },
-      { label: 'Reconciliation', to: '/dashboard/reconciliation', icon: BarChart3 },
-    ],
-  },
-  {
-    heading: 'DEVELOPERS',
-    items: [
-      { label: 'API Keys', to: '/dashboard/api-keys', icon: KeyRound },
-      { label: 'Webhook Config', to: '/dashboard/webhook-config', icon: Radio },
-    ],
-  },
-  {
-    heading: 'SETTINGS',
-    items: [
-      { label: 'Merchant Profile', to: '/dashboard/settings', icon: Settings },
-      { label: 'Team', to: '/dashboard/team', icon: Users },
-    ],
-  },
-];
+import { useAuth } from '@/lib/auth';
+import { NAV, filterNavEntries } from './navigation';
+import type { NavItem } from './navigation';
 
 // ─── NavItem component ────────────────────────────────────────────────────────
 
@@ -112,6 +45,8 @@ export function SidebarContent({
   merchantCode,
   merchantStatus,
 }: SidebarContentProps) {
+  const { user } = useAuth();
+  const visibleNav = filterNavEntries(NAV, user?.role ?? null);
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -142,7 +77,7 @@ export function SidebarContent({
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-4 scrollbar-thin" aria-label="Main navigation">
         <ul className="space-y-0.5" role="list">
-          {NAV.map((entry, i) => {
+          {visibleNav.map((entry, i) => {
             // Top-level link (no heading)
             if ('to' in entry) {
               return (

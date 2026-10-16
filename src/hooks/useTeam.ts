@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth';
+import { canManageTeam } from '@/lib/auth/permissions';
 import type {
   CreateInvitationRequest,
   CreateInvitationResponse,
@@ -21,7 +22,7 @@ export function useCreateInvitation() {
       const response = await apiClient.post<CreateInvitationResponse>(
         '/api/v1/dashboard/users/invite',
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -40,7 +41,7 @@ export function useUpdateUserStatus() {
       const response = await apiClient.patch<DashboardUserResponse>(
         `/api/v1/dashboard/users/${encodeURIComponent(userId)}/status`,
         { status },
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -57,7 +58,7 @@ export function useUpdateUserRole() {
       const response = await apiClient.patch<DashboardUserResponse>(
         `/api/v1/dashboard/users/${encodeURIComponent(userId)}/role`,
         { role },
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -73,7 +74,7 @@ export function useChangePassword() {
       const response = await apiClient.patch<DashboardUserResponse>(
         '/api/v1/dashboard/me/password',
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -84,7 +85,7 @@ export function useChangePassword() {
 export function useTeamCapabilities() {
   const { user } = useAuth();
   return {
-    canManageTeam: user?.role === 'OWNER',
+    canManageTeam: canManageTeam(user?.role),
     canChangeOwnPassword: !!user,
   };
 }

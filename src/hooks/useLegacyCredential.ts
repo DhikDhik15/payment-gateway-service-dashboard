@@ -27,7 +27,7 @@ export function useMigrateLegacyCredential() {
       const response = await apiClient.post<LegacyMigrationResponse>(
         '/api/v1/dashboard/legacy-credential/migrate',
         undefined,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -46,7 +46,7 @@ export function useDisableLegacyCredential() {
       const response = await apiClient.post<LegacyDisableResponse>(
         '/api/v1/dashboard/legacy-credential/disable',
         undefined,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },

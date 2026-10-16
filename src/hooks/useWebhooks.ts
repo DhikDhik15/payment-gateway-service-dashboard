@@ -35,7 +35,7 @@ export function useUpsertWebhookConfig() {
       const response = await apiClient.put<MerchantWebhookConfigWithSecretResponse>(
         '/api/v1/dashboard/webhook-config',
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -53,7 +53,7 @@ export function useRotateWebhookSecret() {
       const response = await apiClient.post<MerchantWebhookConfigWithSecretResponse>(
         '/api/v1/dashboard/webhook-config/rotate',
         undefined,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -69,7 +69,7 @@ export function useDisableWebhookConfig() {
     mutationFn: async () => {
       const response = await apiClient.delete<MerchantWebhookConfigResponse>(
         '/api/v1/dashboard/webhook-config',
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -127,7 +127,7 @@ export function useRetryWebhookDelivery() {
       const response = await apiClient.post<MerchantWebhookDeliveryResponse>(
         `/api/v1/dashboard/webhooks/${encodeURIComponent(id)}/retry`,
         undefined,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },

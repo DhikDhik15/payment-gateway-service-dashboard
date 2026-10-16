@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, ApiClientError } from '@/lib/api/client';
 import { getSimulatorPaymentRefetchInterval } from '@/lib/simulator/polling';
 import { getSimulatorApiKey } from '@/lib/simulator/credential';
+import { simulatorTransitionInvalidations } from './invalidation';
 import type { PaymentResponse, CreatePaymentRequest, CreatePaymentResponse } from '@/types';
 
 function simulatorOptions() {
@@ -20,10 +21,10 @@ export function useSimulatorPaymentDetail(paymentId?: string) {
 
 export function useSimulatorSuccess(paymentId: string) {
   const queryClient = useQueryClient();
-  return useMutation({ mutationFn: async () => { const response = await apiClient.post<{ status: string }>(`/api/v1/simulator/payments/${encodeURIComponent(paymentId)}/success`, undefined, simulatorOptions()); return response.data; }, onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['simulator-payment-detail', paymentId] }); void queryClient.invalidateQueries({ queryKey: ['dashboard-payments'] }); void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] }); } });
+  return useMutation({ mutationFn: async () => { const response = await apiClient.post<{ status: string }>(`/api/v1/simulator/payments/${encodeURIComponent(paymentId)}/success`, undefined, simulatorOptions()); return response.data; }, onSuccess: () => { for (const queryKey of simulatorTransitionInvalidations(paymentId)) { void queryClient.invalidateQueries({ queryKey }); } } });
 }
 
 export function useSimulatorFailure(paymentId: string) {
   const queryClient = useQueryClient();
-  return useMutation({ mutationFn: async () => { const response = await apiClient.post<{ status: string }>(`/api/v1/simulator/payments/${encodeURIComponent(paymentId)}/fail`, undefined, simulatorOptions()); return response.data; }, onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['simulator-payment-detail', paymentId] }); void queryClient.invalidateQueries({ queryKey: ['dashboard-payments'] }); void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] }); } });
+  return useMutation({ mutationFn: async () => { const response = await apiClient.post<{ status: string }>(`/api/v1/simulator/payments/${encodeURIComponent(paymentId)}/fail`, undefined, simulatorOptions()); return response.data; }, onSuccess: () => { for (const queryKey of simulatorTransitionInvalidations(paymentId)) { void queryClient.invalidateQueries({ queryKey }); } } });
 }

@@ -24,6 +24,7 @@ import { ProductDetailsCard } from '@/components/payments/ProductDetailsCard';
 import { useSettings } from '@/hooks/useSettings';
 import { errorMessage, fieldError, isErrorCode, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canIssueRefunds } from '@/lib/auth/permissions';
 import { formatCurrency, formatDateTime, openPaymentPage, safeHttpUrl } from '@/lib/utils';
 
 const refundSchema = z.object({
@@ -61,10 +62,10 @@ export function PaymentDetailPage() {
   const idempotencyKey = useRef(newIdempotencyKey());
   const form = useForm<RefundFormValues>({ resolver: zodResolver(refundSchema), defaultValues: { reason: '' } });
 
-  const canRefund = (user?.role === 'OWNER' || user?.role === 'ADMIN') && merchant?.status === 'ACTIVE';
+  const canRefund = canIssueRefunds(user?.role) && merchant?.status === 'ACTIVE';
 
   const openRefund = () => {
-    if (!data) return;
+    if (!data || !canRefund) return;
     refundMutation.reset();
     form.reset({ reason: '' });
     setIsRefundOpen(true);
@@ -77,7 +78,7 @@ export function PaymentDetailPage() {
   };
 
   const submitRefund = (values: RefundFormValues) => {
-    if (!data) return;
+    if (!data || !canRefund || refundMutation.isPending) return;
     refundMutation.mutate({ body: { ...values, currency: data.currency }, idempotencyKey: idempotencyKey.current }, {
       onSuccess: () => { idempotencyKey.current = newIdempotencyKey(); setIsRefundOpen(false); form.reset(); },
     });

@@ -2,7 +2,7 @@ import { RouterProvider } from 'react-router-dom';
 import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary';
 import { QueryProvider } from './providers/QueryProvider';
 import { AuthProvider } from '@/lib/auth';
-import { router } from '@/routes';
+import { getRouter } from '@/routes';
 
 /**
  * Root application component.
@@ -19,7 +19,7 @@ export function App() {
     <QueryProvider>
       <AuthProvider>
         <AppErrorBoundary>
-          <RouterProvider router={router} />
+          <RouterProvider router={getRouter()} />
         </AppErrorBoundary>
       </AuthProvider>
     </QueryProvider>

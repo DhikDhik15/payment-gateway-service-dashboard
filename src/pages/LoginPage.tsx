@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -75,7 +75,10 @@ export function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" required>Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" required>Password</Label>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot Password?</Link>
+              </div>
               <div className="relative">
                 <Input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" hasError={!!errors.password} aria-describedby={errors.password ? 'password-error' : undefined} className="pr-10" {...register('password')} />
                 <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} className={cn('absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md')}>

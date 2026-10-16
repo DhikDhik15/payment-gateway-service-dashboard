@@ -40,6 +40,7 @@ import {
 } from '@/lib/client-simulator/credential';
 import { openPaymentPage } from '@/lib/utils/url';
 import { formatCurrency, formatDateTime } from '@/lib/utils/format';
+import { useDocumentTitle } from '@/lib/documentTitle';
 import { errorMessage, isErrorCode } from '@/lib/api/errors';
 import { getReceiverEvents, type ReceiverEvent } from '@/lib/client-simulator/webhookReceiver';
 import { useQuery } from '@tanstack/react-query';
@@ -102,6 +103,7 @@ function statusVariant(status: ConnectionStatus): 'default' | 'success' | 'dange
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ClientSimulatorPage() {
+  useDocumentTitle('Client simulator');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('not_connected');
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);

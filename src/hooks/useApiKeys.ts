@@ -28,7 +28,7 @@ export function useCreateApiKey() {
       const response = await apiClient.post<CreateMerchantAPIKeyResponse>(
         '/api/v1/dashboard/api-keys',
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -45,7 +45,7 @@ export function useRevokeApiKey() {
       await apiClient.post(
         `/api/v1/dashboard/api-keys/${encodeURIComponent(id)}/revoke`,
         undefined,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
     },
     onSuccess: () => {

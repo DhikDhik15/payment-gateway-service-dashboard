@@ -15,6 +15,10 @@ import {
   dashboardPaymentsQueryKey,
   type ListPaymentsParams,
 } from './paymentsQuery';
+import {
+  dashboardPaymentCreatedInvalidations,
+  dashboardRefundCreatedInvalidations,
+} from './invalidation';
 
 export type { ListPaymentsParams };
 export {
@@ -74,18 +78,18 @@ export function useCreateRefund(paymentId: string) {
         body,
         {
           headers: { 'Idempotency-Key': idempotencyKey },
-          // A 401 is not retried automatically: the caller owns the stable
-          // idempotency key and can decide whether a retry is safe.
-          retryOnUnauthorized: false,
+          // A 401 means the backend auth middleware rejected the request
+          // before the handler ran, so one refresh-and-retry with the same
+          // stable key is safe; the key itself is never regenerated here.
+          retryOnUnauthorized: true,
         },
       );
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['dashboard-payments'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard-payment-detail'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard-refunds'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
+      for (const queryKey of dashboardRefundCreatedInvalidations()) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }
@@ -99,14 +103,15 @@ export function useCreatePayment() {
         body,
         {
           headers: { 'Idempotency-Key': idempotencyKey },
-          retryOnUnauthorized: false,
+          retryOnUnauthorized: true,
         },
       );
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['dashboard-payments'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
+      for (const queryKey of dashboardPaymentCreatedInvalidations()) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

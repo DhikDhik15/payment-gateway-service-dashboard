@@ -80,9 +80,11 @@ export function useCreateProduct() {
       const response = await apiClient.post<Product>(
         '/api/v1/dashboard/products',
         body,
-        // Product creation carries no backend idempotency key: while the
-        // mutation is pending the form stays disabled instead.
-        { retryOnUnauthorized: false },
+        // A 401 means the backend auth middleware rejected the request before
+        // the handler ran, so one refresh-and-retry is safe even without a
+        // backend idempotency key. The form still stays disabled while the
+        // mutation (including its single retry) is pending.
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -103,7 +105,7 @@ export function useUpdateProduct() {
       const response = await apiClient.patch<Product>(
         buildProductDetailPath(productId),
         body,
-        { retryOnUnauthorized: false },
+        { retryOnUnauthorized: true },
       );
       return response.data;
     },
@@ -116,7 +118,7 @@ export function useDeleteProduct() {
   return useMutation({
     mutationFn: async ({ productId }: { productId: string }) => {
       await apiClient.delete(buildProductDetailPath(productId), {
-        retryOnUnauthorized: false,
+        retryOnUnauthorized: true,
       });
       return productId;
     },

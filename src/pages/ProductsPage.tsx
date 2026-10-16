@@ -19,6 +19,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { errorMessage, isErrorCode } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canManageCatalog } from '@/lib/auth/permissions';
 import { useSettings } from '@/hooks/useSettings';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { listTotalPages, type Product } from '@/types';
@@ -45,7 +46,7 @@ export function ProductsPage() {
   const [pendingDelete, setPendingDelete] = useState<Product | null>(null);
   const { user } = useAuth();
   const { data: merchant } = useSettings();
-  const canMutate = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canMutate = canManageCatalog(user?.role);
   const merchantActive = merchant?.status === 'ACTIVE';
 
   const { data, isLoading, isError, error, refetch } = useProducts({
@@ -71,12 +72,15 @@ export function ProductsPage() {
   };
 
   const submitEditor = (values: ProductFormSubmit) => {
+    if (!canMutate) return;
     if (editor?.mode === 'edit') {
+      if (updateMutation.isPending) return;
       updateMutation.mutate(
         { productId: editor.product.id, body: values },
         { onSuccess: () => setEditor(null) },
       );
-    } else {
+    } else if (editor) {
+      if (!merchantActive || createMutation.isPending) return;
       createMutation.mutate(
         { body: values },
         { onSuccess: () => setEditor(null) },
@@ -85,7 +89,7 @@ export function ProductsPage() {
   };
 
   const confirmDelete = () => {
-    if (!pendingDelete || deleteMutation.isPending) return;
+    if (!canMutate || !pendingDelete || deleteMutation.isPending) return;
     deleteMutation.mutate(
       { productId: pendingDelete.id },
       { onSuccess: () => setPendingDelete(null) },
@@ -93,6 +97,7 @@ export function ProductsPage() {
   };
 
   const toggleActive = (product: Product) => {
+    if (!canMutate || toggleMutation.isPending) return;
     toggleMutation.toggle(product.id, !product.active);
   };
 

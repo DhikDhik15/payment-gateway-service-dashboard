@@ -16,6 +16,7 @@ import { useWebhookDeliveryDetail, useRetryWebhookDelivery } from '@/hooks/useWe
 import { useSettings } from '@/hooks/useSettings';
 import { errorMessage, isMerchantInactiveError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { canManageWebhooks } from '@/lib/auth/permissions';
 import { formatDateTime } from '@/lib/utils';
 
 export function WebhookDetailPage() {
@@ -24,7 +25,12 @@ export function WebhookDetailPage() {
   const { data: merchant } = useSettings();
   const { data, isLoading, isError, error, refetch } = useWebhookDeliveryDetail(id);
   const retryMutation = useRetryWebhookDelivery();
-  const canRetry = (user?.role === 'OWNER' || user?.role === 'ADMIN') && merchant?.status === 'ACTIVE' && !!data && ['FAILED', 'DEAD', 'PENDING'].includes(data.status);
+  const canRetry = canManageWebhooks(user?.role) && merchant?.status === 'ACTIVE' && !!data && ['FAILED', 'DEAD', 'PENDING'].includes(data.status);
+
+  const retry = () => {
+    if (!canRetry || !data || retryMutation.isPending) return;
+    retryMutation.mutate(data.id);
+  };
 
   if (isLoading) return <SkeletonCard />;
   if (isError || !data) return <ErrorState title="Could not load webhook delivery" description={errorMessage(error, 'The delivery record could not be loaded.')} onRetry={() => void refetch()} />;
@@ -39,7 +45,7 @@ export function WebhookDetailPage() {
           <Card className="border-info/20 bg-info/5"><CardContent className="flex items-start gap-2 p-4 text-sm text-info"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><p className="text-xs">For safety, the dashboard does not display raw provider response bodies or signing material. Use the delivery status, HTTP status, and your server logs for diagnostics.</p></CardContent></Card>
           <Card><CardHeader><CardTitle>Related transaction</CardTitle></CardHeader><CardContent><div className="flex items-center justify-between gap-3 rounded-lg border p-4"><div className="flex min-w-0 items-center gap-3"><CreditCard className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" /><div className="min-w-0"><p className="text-sm font-medium">Payment transaction</p><p className="truncate font-mono text-xs text-muted-foreground">{data.transaction_id}</p></div></div><Button variant="ghost" size="sm" asChild><Link to={`/dashboard/payments/${encodeURIComponent(data.transaction_id)}`}><ExternalLink className="h-4 w-4" aria-hidden="true" /><span className="sr-only">Open payment</span></Link></Button></div></CardContent></Card>
         </div>
-        <Card><CardHeader><CardTitle>Actions</CardTitle></CardHeader><CardContent><Button className="w-full" onClick={() => retryMutation.mutate(data.id)} disabled={!canRetry || retryMutation.isPending} title={!canRetry ? 'OWNER or ADMIN role, active merchant, and retryable status required' : undefined}><RefreshCw className={`mr-2 h-4 w-4 ${retryMutation.isPending ? 'animate-spin' : ''}`} aria-hidden="true" /> Retry delivery</Button></CardContent></Card>
+        <Card><CardHeader><CardTitle>Actions</CardTitle></CardHeader><CardContent><Button className="w-full" onClick={retry} disabled={!canRetry || retryMutation.isPending} title={!canRetry ? 'OWNER or ADMIN role, active merchant, and retryable status required' : undefined}><RefreshCw className={`mr-2 h-4 w-4 ${retryMutation.isPending ? 'animate-spin' : ''}`} aria-hidden="true" /> Retry delivery</Button></CardContent></Card>
       </div>
     </div>
   );

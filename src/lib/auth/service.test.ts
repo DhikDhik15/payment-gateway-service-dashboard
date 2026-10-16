@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authService, tokenStorage } from './service.ts';
+import { authService, isRestoreFailure, tokenStorage } from './service.ts';
+import { ApiClientError, apiClient } from '@/lib/api/client';
 
 const originalFetch = globalThis.fetch;
 const user = {
@@ -145,4 +146,52 @@ test('logout calls the server with the memory bearer and always clears local acc
   assert.equal(called, true);
   assert.equal(authorization, 'Bearer access-3');
   assert.equal(tokenStorage.get(), null);
+});
+
+test('concurrent mutation 401s share one backend refresh and both succeed', async () => {
+  tokenStorage.set('stale-access', Date.now() + 60_000);
+  const calls: string[] = [];
+  const retryAuthorizations: Array<string | null> = [];
+  const errorBody = JSON.stringify({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'expired' } });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push(url);
+    if (url.endsWith('/api/v1/auth/refresh')) {
+      return json({ access_token: 'fresh-access', token_type: 'Bearer', expires_in: 900, user });
+    }
+    if (new Headers(init?.headers).get('authorization') === 'Bearer stale-access') {
+      return new Response(errorBody, { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    retryAuthorizations.push(new Headers(init?.headers).get('authorization'));
+    return json({ ok: true });
+  };
+
+  const [first, second] = await Promise.all([
+    apiClient.post('/api/v1/dashboard/products', { name: 'a' }, { retryOnUnauthorized: true }),
+    apiClient.post('/api/v1/dashboard/categories', { name: 'b' }, { retryOnUnauthorized: true }),
+  ]);
+  assert.equal(first.success, true);
+  assert.equal(second.success, true);
+  assert.equal(calls.filter((url) => url.endsWith('/api/v1/auth/refresh')).length, 1);
+  assert.deepEqual(retryAuthorizations, ['Bearer fresh-access', 'Bearer fresh-access']);
+  assert.equal(tokenStorage.get(), 'fresh-access');
+});
+
+test('getSession network failure rethrows without clearing the memory token', async () => {
+  tokenStorage.set('access-net', Date.now() + 60_000);
+  globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
+  await assert.rejects(() => authService.getSession(), (error: unknown) => {
+    assert.ok(error instanceof ApiClientError);
+    assert.equal(error.code, 'NETWORK_ERROR');
+    return true;
+  });
+  assert.equal(tokenStorage.get(), 'access-net');
+});
+
+test('restore failure classification distinguishes transport failure from auth rejection', () => {
+  assert.equal(isRestoreFailure(new ApiClientError(401, 'INVALID_CREDENTIALS', 'expired')), false);
+  assert.equal(isRestoreFailure(new ApiClientError(0, 'NETWORK_ERROR', 'unreachable')), true);
+  assert.equal(isRestoreFailure(new ApiClientError(0, 'REQUEST_TIMEOUT', 'timed out')), true);
+  assert.equal(isRestoreFailure(new ApiClientError(500, 'REQUEST_FAILED', 'server error')), true);
+  assert.equal(isRestoreFailure(new TypeError('fetch failed')), true);
 });

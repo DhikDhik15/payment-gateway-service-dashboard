@@ -4,11 +4,13 @@ import type { ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { setApiClientSessionExpiredHandler } from '@/lib/api/client';
 import type { AuthState, AuthCredentials, AuthSession, AuthSessionState, SessionEndReason } from '@/types/auth';
-import { authService } from './service';
+import { authService, isRestoreFailure } from './service';
 
-interface AuthContextValue extends AuthState {
+export interface AuthContextValue extends AuthState {
   login: (credentials: AuthCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-run session restore after a transport failure. Manual only. */
+  retryRestore: () => void;
 }
 
 const initialState: AuthState = {
@@ -18,9 +20,10 @@ const initialState: AuthState = {
   isLoading: true,
   sessionExpired: false,
   sessionEndReason: null,
+  restoreFailed: false,
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 function sessionState(session: AuthSession): AuthSessionState {
   return { user: session.user, expires_at: session.expires_at };
@@ -62,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         sessionExpired: false,
         sessionEndReason: null,
+        restoreFailed: false,
       });
       return;
     }
@@ -69,14 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...initialState,
       isLoading: false,
       sessionExpired: current.sessionExpired,
+      restoreFailed: false,
     }));
   }), []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const runRestore = useCallback(() => {
+    setState((current) => ({ ...current, isLoading: true, restoreFailed: false }));
     void authService.getSession()
       .then((session) => {
-        if (cancelled) return;
         setState({
           user: session?.user ?? null,
           session: session ? sessionState(session) : null,
@@ -84,17 +88,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           sessionExpired: false,
           sessionEndReason: null,
+          restoreFailed: false,
         });
       })
-      .catch(() => {
-        if (cancelled) return;
-        // A network failure during restore must not leave a loading screen.
-        setState({ ...initialState, isLoading: false });
+      .catch((error: unknown) => {
+        // A rejection is a transport/server failure, never proof the session
+        // is invalid (401 paths resolve to null). Stay unauthenticated but
+        // flag the outage so routing offers a retry instead of a login bounce.
+        // The query cache is still empty here, so no merchant data can leak.
+        setState({ ...initialState, isLoading: false, restoreFailed: isRestoreFailure(error) });
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    runRestore();
+  }, [runRestore]);
 
   // Refresh shortly before expiry. A failed refresh is handled by the API
   // client's explicit session-expiry callback; this timer never retries a
@@ -120,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading: false,
       sessionExpired: false,
       sessionEndReason: null,
+      restoreFailed: false,
     });
   }, [clearMerchantData]);
 
@@ -133,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearMerchantData]);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, retryRestore: runRestore }}>
       {children}
     </AuthContext.Provider>
   );

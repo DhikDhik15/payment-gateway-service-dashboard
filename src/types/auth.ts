@@ -36,6 +36,13 @@ export interface AuthState {
   /** True when a previously authenticated session ended unexpectedly. */
   sessionExpired: boolean;
   sessionEndReason: SessionEndReason | null;
+  /**
+   * True when the initial session restore failed for a non-authentication
+   * reason (network outage, timeout, 5xx). Unlike an absent session, this
+   * must not bounce the user to login: the session may still be valid and
+   * the user must be offered a retry instead.
+   */
+  restoreFailed: boolean;
 }
 
 export type AuthStatus = 'authenticated' | 'unauthenticated' | 'loading';

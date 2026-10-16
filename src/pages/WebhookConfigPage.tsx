@@ -22,6 +22,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { errorMessage, fieldError, isMerchantInactiveError } from '@/lib/api';
 import { ApiClientError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth';
+import { canManageWebhooks } from '@/lib/auth/permissions';
 
 const webhookSchema = z.object({
   url: z.string().trim().url('Enter a valid absolute URL').superRefine((value, context) => {
@@ -52,7 +53,7 @@ export function WebhookConfigPage() {
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState(false);
   const form = useForm<WebhookFormValues>({ resolver: zodResolver(webhookSchema), defaultValues: { url: '', description: '' } });
-  const canManage = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canManage = canManageWebhooks(user?.role);
   const merchantActive = merchant?.status === 'ACTIVE';
   const config = configQuery.data;
   const notConfigured = configQuery.isError && configQuery.error instanceof ApiClientError && configQuery.error.status === 404;
@@ -68,13 +69,16 @@ export function WebhookConfigPage() {
   };
 
   const save = (values: WebhookFormValues) => {
+    if (!canManage || !merchantActive || upsertMutation.isPending) return;
     upsertMutation.mutate({ url: values.url.trim(), description: values.description?.trim() || undefined }, { onSuccess: (result) => { setRecentSecret(result.secret); setShowSecret(true); } });
   };
   const rotate = () => {
+    if (!canManage || !merchantActive || rotateMutation.isPending) return;
     if (!window.confirm('Rotate the signing secret? Deliveries signed with the old secret may need to be updated immediately.')) return;
     rotateMutation.mutate(undefined, { onSuccess: (result) => { setRecentSecret(result.secret); setShowSecret(true); } });
   };
   const disable = () => {
+    if (!canManage || !merchantActive || disableMutation.isPending) return;
     if (!window.confirm('Disable outbound webhooks? Existing delivery history will be kept.')) return;
     disableMutation.mutate();
   };

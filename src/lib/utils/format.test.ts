@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { dateOnlyToRFC3339EndOfDay } from './format.ts';
+import { dateOnlyToRFC3339EndOfDay, formatInteger } from './format.ts';
 
 test('dateOnlyToRFC3339EndOfDay transforms valid date successfully', () => {
   const input = '2026-09-24';
@@ -38,4 +38,9 @@ test('dateOnlyToRFC3339EndOfDay throws error on invalid calendar date (rollover)
   assert.throws(() => {
     dateOnlyToRFC3339EndOfDay('2026-02-30'); // February only has 28 days in 2026
   }, /Invalid calendar date/);
+});
+
+test('formatInteger groups counts without decimals', () => {
+  assert.strictEqual(formatInteger(0), '0');
+  assert.strictEqual(formatInteger(70000).replace(/[^\d]/g, ''), '70000');
 });

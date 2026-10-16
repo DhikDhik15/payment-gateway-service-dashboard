@@ -1,10 +1,12 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { getRouteTitle, useDocumentTitle } from '@/lib/documentTitle';
 
 /**
  * Wraps unauthenticated pages (e.g., Login).
  * Centered single-column layout.
  */
 export function AuthLayout() {
+  useDocumentTitle(getRouteTitle(useLocation().pathname));
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 px-4 py-12">
       {/* Logo / Brand */}

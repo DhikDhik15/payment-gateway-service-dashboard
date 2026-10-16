@@ -1,12 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { RouteObject } from 'react-router-dom';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
-import { ProtectedRoute } from '@/features/auth';
+import { ProtectedRoute, RequireRole, RestoreErrorScreen } from '@/features/auth';
 import { LoadingPage } from '@/components/feedback';
 import { useAuth } from '@/lib/auth';
+import { MANAGER_ROLES } from '@/lib/auth/permissions';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PaymentsPage } from '@/pages/PaymentsPage';
 import { CreatePaymentPage } from '@/pages/CreatePaymentPage';
@@ -30,10 +34,12 @@ import CheckoutSimulatorPage from '@/pages/CheckoutSimulatorPage';
 import { PublicPaymentPage } from '@/pages/PublicPaymentPage';
 import ClientSimulatorPage from '@/pages/ClientSimulatorPage';
 import { simulatorEnabled } from '@/lib/simulator/config';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
 function RootRedirect() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, restoreFailed, retryRestore } = useAuth();
   if (isLoading) return <LoadingPage />;
+  if (restoreFailed && !isAuthenticated) return <RestoreErrorScreen onRetry={retryRestore} />;
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 }
 
@@ -56,7 +62,12 @@ const simulatorRoutes = simulatorEnabled
     ]
   : [];
 
-export const router = createBrowserRouter([
+/**
+ * Route table under test: unknown URLs must resolve to the not-found page
+ * and restricted routes must stay behind the role guard. The browser router
+ * for production is built from these definitions via getRouter().
+ */
+export const routeDefinitions: RouteObject[] = [
   // Public provider page: intentionally outside AuthLayout and ProtectedRoute.
   // Its API helper omits dashboard bearer tokens and cookies.
   { path: '/pay/:identifier', element: <PublicPaymentPage /> },
@@ -70,6 +81,8 @@ export const router = createBrowserRouter([
     element: <AuthLayout />,
     children: [
       { path: '/login', element: <LoginRoute /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/accept-invitation', element: <InvitationAcceptancePage /> },
     ],
   },
@@ -78,7 +91,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/dashboard/payments', element: <PaymentsPage /> },
-      { path: '/dashboard/payments/new', element: <CreatePaymentPage /> },
+      { path: '/dashboard/payments/new', element: <RequireRole allowedRoles={MANAGER_ROLES} fallback="/dashboard/payments"><CreatePaymentPage /></RequireRole> },
       { path: '/dashboard/payments/:id', element: <PaymentDetailPage /> },
       { path: '/dashboard/products', element: <ProductsPage /> },
       { path: '/dashboard/categories', element: <CategoriesPage /> },
@@ -96,5 +109,13 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '/', element: <RootRedirect /> },
-  { path: '*', element: <Navigate to="/login" replace /> },
-]);
+  { path: '*', element: <NotFoundPage /> },
+];
+
+// Created lazily so that importing the route table (e.g. in Node tests via
+// matchRoutes) never touches browser history. App startup calls getRouter().
+let cachedRouter: ReturnType<typeof createBrowserRouter> | null = null;
+export function getRouter(): NonNullable<typeof cachedRouter> {
+  if (!cachedRouter) cachedRouter = createBrowserRouter(routeDefinitions);
+  return cachedRouter;
+}

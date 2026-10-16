@@ -134,3 +134,141 @@ test('malformed successful responses are rejected as INVALID_RESPONSE', async ()
     return true;
   });
 });
+
+test('mutation 401 with retry opt-in refreshes once and retries the identical request', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  let refreshCalls = 0;
+  let expired = false;
+  setApiClientTokenGetter(() => 'old-access');
+  setApiClientRefreshHandler(async () => { refreshCalls += 1; return 'new-access'; });
+  setApiClientSessionExpiredHandler(() => { expired = true; });
+  globalThis.fetch = async (input, init) => {
+    calls.push({ url: String(input), init });
+    if (calls.length === 1) return response({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'expired' } }, 401);
+    return response({ success: true, data: { id: 'pay-1' } });
+  };
+
+  const result = await apiClient.post<{ id: string }>(
+    '/api/v1/dashboard/payments',
+    { amount: 10000 },
+    { headers: { 'Idempotency-Key': 'key-abc' }, retryOnUnauthorized: true },
+  );
+  assert.deepEqual(result.data, { id: 'pay-1' });
+  assert.equal(calls.length, 2);
+  assert.equal(refreshCalls, 1);
+  assert.equal(expired, false);
+  // The retry re-sends the identical body and idempotency key with the new token.
+  for (const call of calls) {
+    assert.equal(new Headers(call.init?.headers).get('idempotency-key'), 'key-abc');
+    assert.equal(call.init?.body, JSON.stringify({ amount: 10000 }));
+  }
+  assert.equal(new Headers(calls[0]?.init?.headers).get('authorization'), 'Bearer old-access');
+  assert.equal(new Headers(calls[1]?.init?.headers).get('authorization'), 'Bearer new-access');
+});
+
+test('mutation retry happens at most once, then the session expires', async () => {
+  let refreshCalls = 0;
+  let requestCalls = 0;
+  let expired = false;
+  setApiClientTokenGetter(() => 'access');
+  setApiClientRefreshHandler(async () => { refreshCalls += 1; return 'new-access'; });
+  setApiClientSessionExpiredHandler(() => { expired = true; });
+  globalThis.fetch = async () => {
+    requestCalls += 1;
+    return response({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'expired' } }, 401);
+  };
+
+  await assert.rejects(
+    () => apiClient.post('/api/v1/dashboard/api-keys', { name: 'k' }, { retryOnUnauthorized: true }),
+    (error: unknown) => {
+      assert.ok(error instanceof ApiClientError);
+      assert.equal(error.status, 401);
+      return true;
+    },
+  );
+  assert.equal(requestCalls, 2);
+  assert.equal(refreshCalls, 1);
+  assert.equal(expired, true);
+});
+
+test('concurrent mutation 401s each retry exactly once with the refreshed token', async () => {
+  const authorizations: Array<string | null> = [];
+  let refreshCalls = 0;
+  let requestCalls = 0;
+  setApiClientTokenGetter(() => 'old-access');
+  setApiClientRefreshHandler(async () => { refreshCalls += 1; return 'new-access'; });
+  globalThis.fetch = async (_input, init) => {
+    requestCalls += 1;
+    if (requestCalls <= 2) return response({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'expired' } }, 401);
+    authorizations.push(new Headers(init?.headers).get('authorization'));
+    return response({ success: true, data: {} });
+  };
+
+  const options = { retryOnUnauthorized: true } as const;
+  await Promise.all([
+    apiClient.post('/api/v1/dashboard/products', { name: 'a' }, options),
+    apiClient.post('/api/v1/dashboard/categories', { name: 'b' }, options),
+  ]);
+  assert.equal(requestCalls, 4);
+  assert.ok(refreshCalls >= 1);
+  assert.deepEqual(authorizations, ['Bearer new-access', 'Bearer new-access']);
+});
+
+test('mutation 401 with failed refresh ends the session without replaying', async () => {
+  let requestCalls = 0;
+  let expired = false;
+  setApiClientTokenGetter(() => 'access');
+  setApiClientRefreshHandler(async () => null);
+  setApiClientSessionExpiredHandler(() => { expired = true; });
+  globalThis.fetch = async () => {
+    requestCalls += 1;
+    return response({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'expired' } }, 401);
+  };
+
+  await assert.rejects(() => apiClient.post('/api/v1/dashboard/products', {}, { retryOnUnauthorized: true }));
+  assert.equal(requestCalls, 1);
+  assert.equal(expired, true);
+});
+
+test('transient refresh failure preserves the session and surfaces the original 401', async () => {
+  let expired = false;
+  let refreshCalls = 0;
+  setApiClientTokenGetter(() => 'access');
+  setApiClientRefreshHandler(async () => {
+    refreshCalls += 1;
+    throw new ApiClientError(0, 'NETWORK_ERROR', 'Unable to reach the server.');
+  });
+  setApiClientSessionExpiredHandler(() => { expired = true; });
+  globalThis.fetch = async () => response({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'expired' } }, 401);
+
+  await assert.rejects(
+    () => apiClient.post('/api/v1/dashboard/products', {}, { retryOnUnauthorized: true }),
+    (error: unknown) => {
+      assert.ok(error instanceof ApiClientError);
+      assert.equal(error.status, 401);
+      return true;
+    },
+  );
+  assert.equal(refreshCalls, 1);
+  assert.equal(expired, false);
+});
+
+test('network failure on a mutation attempts no refresh and preserves the session', async () => {
+  let refreshCalls = 0;
+  let expired = false;
+  setApiClientTokenGetter(() => 'access');
+  setApiClientRefreshHandler(async () => { refreshCalls += 1; return 'new-access'; });
+  setApiClientSessionExpiredHandler(() => { expired = true; });
+  globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
+
+  await assert.rejects(
+    () => apiClient.post('/api/v1/dashboard/products', {}, { retryOnUnauthorized: true }),
+    (error: unknown) => {
+      assert.ok(error instanceof ApiClientError);
+      assert.equal(error.code, 'NETWORK_ERROR');
+      return true;
+    },
+  );
+  assert.equal(refreshCalls, 0);
+  assert.equal(expired, false);
+});

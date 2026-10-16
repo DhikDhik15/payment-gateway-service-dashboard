@@ -31,6 +31,16 @@ export function formatDate(iso: string): string {
 }
 
 /**
+ * Format an integer count with locale grouping (id-ID).
+ * Used for display only — never for calculations.
+ */
+export function formatInteger(value: number): string {
+  return new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+/**
  * Truncate a string to a given length.
  */
 export function truncate(str: string, length = 24): string {

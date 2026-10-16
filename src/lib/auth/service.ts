@@ -38,6 +38,17 @@ export interface IAuthService {
   clearLocalSession(): void;
 }
 
+/**
+ * Classify a getSession() rejection. getSession converts every 401 path
+ * (expired token, invalid cookie) into a resolved null, so a rejection is a
+ * transport or server failure by construction — never proof that the session
+ * is invalid. The explicit 401 check is defense-in-depth against future
+ * throw paths. Callers must offer a retry, not a login bounce.
+ */
+export function isRestoreFailure(error: unknown): boolean {
+  return !(error instanceof ApiClientError && error.status === 401);
+}
+
 type AuthApiResponse = {
   access_token: string;
   token_type: string;
